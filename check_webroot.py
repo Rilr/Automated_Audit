@@ -3,8 +3,8 @@ import datetime as dt
 
 # Define variables
 
-webrootIn = r'C:\scripting\Input\8d560db0-b676-41a9-a5b7-9a4676657653.csv'
-webrootOut = r'C:\scripting\Output\webroot_date_results.xlsx'
+webrootIn = r'C:\scripting\Input\centerlinkwr0523.csv'
+webrootOut = r'C:\scripting\Output\date_webroot_results.xlsx'
 
 # Read data from input.xlsx
 webroot_df = pd.read_csv(webrootIn)

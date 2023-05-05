@@ -3,8 +3,8 @@ import datetime as dt
 
 # Define variables
 
-intuneIn = r'C:\scripting\Input\DevicesWithInventory_7fdc4978-2d90-45d5-8a76-cbd53daad3f7.csv'
-intuneOut = r'C:\scripting\Output\intune_date_results.xlsx'
+intuneIn = r'C:\scripting\Input\tctintune0523.csv'
+intuneOut = r'C:\scripting\Output\date_intune_results.xlsx'
 
 # Read data from input.xlsx
 intune_df = pd.read_csv(intuneIn)
