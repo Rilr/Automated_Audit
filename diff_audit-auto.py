@@ -9,10 +9,11 @@ outPath = r'C:\scripting\Output\missing_audit-auto.xlsx'
 audit_df = pd.read_excel(auditPath, sheet_name=0, header=2, usecols=[4], engine='openpyxl')
 auto_df = pd.read_excel(autoPath, usecols=[0], engine="openpyxl")
 
+#-----clean the data-----#
+audit_df = audit_df.dropna(how='all')
+
 #-----merge the files-----#
 merged_df = pd.merge(audit_df, auto_df, left_on='Configuration Name', right_on='Name', how='outer', suffixes=['_audit', '_auto'], indicator=True)
-merged_df['Configuration Name'] = merged_df['Configuration Name'].dropna()
-merged_df['Name'] = merged_df['Name'].dropna()
 
 #-----make column values readable-----#
 merged_df = merged_df.rename(columns={'_merge': 'Found In'})

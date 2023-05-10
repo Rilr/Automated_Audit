@@ -8,6 +8,7 @@ outPath = r'C:\scripting\Output\missing_audit-webroot.xlsx'
 #-----read the files-----#
 audit_df = pd.read_excel(auditPath, header=2, usecols=[4], engine='openpyxl')
 webroot_df = pd.read_csv(webrootPath, header=0, usecols=[0])
+audit_df = audit_df.dropna(how='all')
 
 #-----merge the files-----#
 merged_df = pd.merge(audit_df, webroot_df, left_on='Configuration Name', right_on='Hostname', how='outer', suffixes=['_audit', '_intune'], indicator=True)

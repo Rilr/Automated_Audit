@@ -9,6 +9,9 @@ outPath = r'C:\scripting\Output\missing_audit-intune.xlsx'
 audit_df = pd.read_excel(auditPath, sheet_name=0, header=2, usecols=[4], engine='openpyxl')
 intune_df = pd.read_csv(intunePath, header=0, usecols=[1])
 
+#-----clean the data-----#
+audit_df = audit_df.dropna(how='all')
+
 #-----merge the files-----#
 merged_df = pd.merge(audit_df, intune_df, left_on='Configuration Name', right_on='Device name', how='outer', suffixes=['_audit', '_intune'], indicator=True)
 
