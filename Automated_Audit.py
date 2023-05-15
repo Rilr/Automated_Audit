@@ -1,36 +1,103 @@
 import PySimpleGUI as sg
 import pandas as pd
 from datetime import datetime, timedelta
-from dateutil import parser    
 
-#-----define UI-----#
 sg.theme('DarkAmber')
-layout = [[sg.Text('Automate CSV')],                #Automate CSV Upload
-          [sg.InputText(key="-automate-"),
+layout = [[sg.Text('Audit XLSX')],
+          [sg.InputText(key='fpaudit'),
+           sg.FileBrowse(file_types=[("xlsx Files","*.xlsx")])],
+          [sg.Text('Automate XLSX')],
+          [sg.InputText(key="fpauto"),
+           sg.FileBrowse(file_types=[("xlsx Files","*.xlsx")])],
+          [sg.Text('Intune CSV')],
+          [sg.InputText(key="fpintune"),
            sg.FileBrowse(file_types=[("CSV Files","*.csv")])],
-          [sg.Text('Webroot CSV(Not_Yet_Suported)')],   #Webroot CSV Upload
-          [sg.InputText(key="-webroot-"),
+          [sg.Text('Webroot CSV')],
+          [sg.InputText(key="fpwebroot"),
            sg.FileBrowse(file_types=[("CSV Files","*.csv")])],
-          [sg.Button("Submit"), sg.Cancel()]]       #Submit and Cancel Button
+          [sg.Button("Submit"), sg.Cancel()]]
 window = sg.Window('AutoAutomate', layout)
 
-#-----define time variables-----#
-current_date = datetime.now()
-one_month_ago = current_date - timedelta(days=30)
-
-#-----what to do with the imported data-----#
 while True:
-    event, values = window.read() 
-    automateData, webrootData = values['-automate-'], values['-webroot-'] #Passing the CSV dataframes into variables, f2 is not used
+    event, values = window.read()
+    audit_file_path = values['fpaudit']
+    auto_file_path = values['fpauto']
+    intune_file_path = values['fpintune']
+    webroot_file_path = values['fpwebroot']
+    audit_df = pd.read_excel(audit_file_path, sheet_name=0, header=2, usecols=[4], engine='openpyxl')
+    auto_df, intune_df, webroot_df = [], [], []
+    auto_audit_out = r'C:\scripting\Output\audit-discrepancies.xlsx'
+    
     if event in (sg.WIN_CLOSED, 'Cancel'):
         break
-    elif event == "Submit":
-        df = pd.read_csv(automateData, header=0)          #Read the csv
-        #date_format = '%Y-%m-%d %H:%M:%S.%f%f%f' ###Old variable, might want to reuse for datetime.strptime()###
-        for index, row in df.iterrows():        #Iterate through the rows
-            date_str = row[3]
-            deviceName = row[1]
-            date_obj = parser.parse(date_str)   #Covert date into readable format
-            if date_obj < one_month_ago:
-                print(deviceName)               #Eventually plan to pass through to it's own CSV, highlighting problem configs and their issues
+    
+    elif event == "Submit":        
+        # Automate difference checker
+        def diffAuto(audit_df, auto_df):
+            audit_df = audit_df.dropna(how='all')
+            auto_df = pd.read_excel(auto_file_path, header=0, usecols=[0], engine='openpyxl')
+            diffAuto_df = pd.merge(audit_df, auto_df, left_on='Configuration Name', right_on='Name', how='outer', suffixes=['_audit', '_auto'], indicator=True)
+            diffAuto_df = diffAuto_df.rename(columns={'_merge': 'Found In'})
+            diffAuto_df['Found In'] = diffAuto_df['Found In'].replace({'left_only': 'Only in Audit', 'right_only': 'Only in Automate'})
+            return diffAuto_df
+
+        # Intune difference checker
+        def diffIntune(audit_df, intune_df):
+            audit_df = audit_df.dropna(how='all')
+            intune_df = pd.read_csv(intune_file_path, header=0, usecols=[1])
+            diffIntune_df = pd.merge(audit_df, intune_df, left_on='Configuration Name', right_on='Device name', how='outer', suffixes=['_audit', '_intune'], indicator=True)
+            diffIntune_df = diffIntune_df.rename(columns={'_merge': 'Found In'})
+            diffIntune_df['Found In'] = diffIntune_df['Found In'].replace({'left_only': 'Only in Audit', 'right_only': 'Only in Intune'})
+            return diffIntune_df
+
+        # Webroot difference checker
+        def diffWebroot(audit_df, webroot_df):
+            audit_df = audit_df.dropna(how='all')
+            webroot_df = pd.read_csv(webroot_file_path, header=0, usecols=[0])
+            diffWebroot_df = pd.merge(audit_df, webroot_df, left_on='Configuration Name', right_on='Hostname', how='outer', suffixes=['_audit', '_intune'], indicator=True)
+            diffWebroot_df = diffWebroot_df.rename(columns={'_merge': 'Found In'})
+            diffWebroot_df['Found In'] = diffWebroot_df['Found In'].replace({'left_only': 'Only in Audit', 'right_only': 'Only in Webroot'})
+            return diffWebroot_df
+
+        # Automate date checker
+        def dateAuto(auto_df):
+            auto_df = pd.read_excel(auto_file_path, header=0, engine='openpyxl')
+            two_weeks_ago = datetime.now() - timedelta(days=14)
+            datemask = auto_df['Last Contact'] < two_weeks_ago
+            dateAuto_df = auto_df.loc[datemask]
+            return dateAuto_df
+
+        # Intune date checker
+        def dateIntune(intune_df):
+            intune_df = pd.read_csv(intune_file_path, header=0)
+            two_weeks_ago = datetime.now() - timedelta(days=14)
+            datemask = pd.to_datetime(intune_df['Last check-in']) < two_weeks_ago
+            dateIntune_df = intune_df.loc[datemask]
+            return dateIntune_df
+
+        # Webroot date checker
+        def dateWebroot(webroot_df):
+            webroot_df = pd.read_csv(webroot_file_path, header=0)
+            two_weeks_ago = datetime.now() - timedelta(days=14)
+            datemask = pd.to_datetime(webroot_df['Last Seen']) < two_weeks_ago
+            dateWebroot_df = webroot_df.loc[datemask]  
+            return dateWebroot_df
+
+        diffAuto_df = diffAuto(audit_df, auto_df)
+        diffIntune_df = diffIntune(audit_df, intune_df)
+        diffWebroot_df = diffWebroot(audit_df, webroot_df)
+        dateAuto_df = dateAuto(auto_df)
+        dateIntune_df = dateIntune(intune_df)
+        dateWebroot_df = dateWebroot(webroot_df)
+
+        with pd.ExcelWriter(auto_audit_out, mode='w', engine='xlsxwriter') as writer:
+            diffAuto_df.to_excel(writer, sheet_name='diffAuto', index=False)
+            diffIntune_df.to_excel(writer, sheet_name='diffIntune', index=False)
+            diffWebroot_df.to_excel(writer, sheet_name="diffWebroot", index=False)
+            dateAuto_df.to_excel(writer, sheet_name='dateAuto', index=False)
+            dateAuto_df.to_excel(writer, sheet_name='dateAuto', index=False)
+            dateAuto_df.to_excel(writer, sheet_name='dateAuto', index=False)
+            dateIntune_df.to_excel(writer, sheet_name='dateIntune', index=False)
+            dateWebroot_df.to_excel(writer, sheet_name='dateWebroot', index=False)
+    sg.popup('Your report was generated at ' + auto_audit_out)
 window.close()
