@@ -32,8 +32,11 @@ while True:
         break
     
     elif event == "Submit":        
-        if bool(auto_file_path) == True:
+        if not audit_file_path:
+            sg.popup_error("No Audit XLSX File Uploaded!")
+            continue
         # Automate difference checker
+        if audit_file_path:
             def diffAuto(audit_df, auto_df):
                 audit_df = audit_df.dropna(how='all')
                 auto_df = pd.read_excel(auto_file_path, header=0, usecols=[0], engine='openpyxl')
@@ -41,11 +44,11 @@ while True:
                 diffAuto_df = diffAuto_df.rename(columns={'_merge': 'Found In'})
                 diffAuto_df['Found In'] = diffAuto_df['Found In'].replace({'left_only': 'Only in Audit', 'right_only': 'Only in Automate'})
                 return diffAuto_df
-        elif bool(audit_df) == False:
-            sg.popup_error("No Audit XLSX File Uploaded!")
-            break
-        
-        elif bool(intune_file_path) == True:
+            diffAuto_df = diffAuto(audit_df, auto_df)
+        else:
+            print('No Audit File Uploaded!')
+
+        if intune_file_path:
             # Intune difference checker
             def diffIntune(audit_df, intune_df):
                 audit_df = audit_df.dropna(how='all')
@@ -54,10 +57,12 @@ while True:
                 diffIntune_df = diffIntune_df.rename(columns={'_merge': 'Found In'})
                 diffIntune_df['Found In'] = diffIntune_df['Found In'].replace({'left_only': 'Only in Audit', 'right_only': 'Only in Intune'})
                 return diffIntune_df
-        elif bool(False):
+            diffIntune_df = diffIntune(audit_df, intune_df)
+        else:
+            print('No Intune File Uploaded!')
             continue
-        
-        elif bool(webroot_file_path) == True:
+
+        if webroot_file_path:
         # Webroot difference checker
             def diffWebroot(audit_df, webroot_df):
                 audit_df = audit_df.dropna(how='all')
@@ -66,10 +71,12 @@ while True:
                 diffWebroot_df = diffWebroot_df.rename(columns={'_merge': 'Found In'})
                 diffWebroot_df['Found In'] = diffWebroot_df['Found In'].replace({'left_only': 'Only in Audit', 'right_only': 'Only in Webroot'})
                 return diffWebroot_df
-        elif bool(False):
+            diffWebroot_df = diffWebroot(audit_df, webroot_df)
+        else:
+            print('No Webroot File Uploaded!')
             continue
 
-        elif bool(auto_file_path) == True:
+        if auto_file_path:
         # Automate date checker
             def dateAuto(auto_df):
                 auto_df = pd.read_excel(auto_file_path, header=0, engine='openpyxl')
@@ -77,11 +84,12 @@ while True:
                 datemask = auto_df['Last Contact'] < two_weeks_ago
                 dateAuto_df = auto_df.loc[datemask]
                 return dateAuto_df
-        elif bool(auto_file_path) == False:
-            print('No Auto DF for Dates!')
+            dateAuto_df = dateAuto(auto_df)
+        else:
+            print('No Automate file for Dates!')
             continue
         
-        elif bool(intune_file_path) == True:
+        if intune_file_path:
         # Intune date checker
             def dateIntune(intune_df):
                 intune_df = pd.read_csv(intune_file_path, header=0)
@@ -89,11 +97,12 @@ while True:
                 datemask = pd.to_datetime(intune_df['Last check-in']) < two_weeks_ago
                 dateIntune_df = intune_df.loc[datemask]
                 return dateIntune_df
-        elif bool(intune_file_path) == False:
+            dateIntune_df = dateIntune(intune_df)
+        else:
             print('No Intune DF for Dates!')
             continue
         
-        elif bool(webroot_file_path) == True:            
+        if webroot_file_path:            
             # Webroot date checker
             def dateWebroot(webroot_df):
                 webroot_df = pd.read_csv(webroot_file_path, header=0)
@@ -101,7 +110,8 @@ while True:
                 datemask = pd.to_datetime(webroot_df['Last Seen']) < two_weeks_ago
                 dateWebroot_df = webroot_df.loc[datemask]  
                 return dateWebroot_df
-        elif bool(webroot_file_path) == False:
+            dateWebroot_df = dateWebroot(webroot_df)
+        else:
             print('No Webroot DF for Dates!')
             continue
                     
