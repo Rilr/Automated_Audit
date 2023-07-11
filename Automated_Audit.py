@@ -82,6 +82,9 @@ def main():
             [sg.Text('Intune CSV')],
             [sg.InputText(key="fpintune"),
             sg.FileBrowse(file_types=[("CSV Files","*.csv")])],
+            [sg.Text('Webroot CSV')],
+            [sg.InputText(key="fpwebroot"),
+            sg.FileBrowse(file_types=[("CSV Files","*.csv")])],
             [sg.Text('File Output Location')],
             [sg.InputText(key="outpath"),
             sg.FolderBrowse()],
@@ -119,6 +122,17 @@ def main():
             "file_path": values['fpintune'],
             "check_in": "Last check-in"
         }
+        
+        webrootLib = {
+            "inv_system": "webroot",
+            "config_name": "Configuration Name",
+            "device_name": "Hostname",
+            "file_type": "csv",
+            "header": 0,
+            "column": 0,
+            "file_path": values['fpwebroot'],
+            "check_in": "Last Seen"
+        }
 
         if event in (sg.WIN_CLOSED,'Cancel'):
             break
@@ -129,10 +143,14 @@ def main():
                     diffChecker(audit_df, autoLib,).to_excel(writer, sheet_name='diffAuto', index=False)
                 if audit_file_path and intuneLib['file_path']:
                     diffChecker(audit_df, intuneLib).to_excel(writer, sheet_name='diffIntune', index=False)
+                if audit_file_path and webrootLib['file_path']:
+                    diffChecker(audit_df, webrootLib).to_excel(writer, sheet_name='diffWebroot', index=False)
                 if autoLib['file_path']:
                     dateChecker(autoLib).to_excel(writer, sheet_name='dateAuto', index=False)
                 if intuneLib['file_path']:
                     dateChecker(intuneLib).to_excel(writer, sheet_name='dateIntune', index=False)
+                if webrootLib['file_path']:
+                    dateChecker(webrootLib).to_excel(writer, sheet_name='dateWebroot', index=False)
         sg.popup('Your report was generated at ' + auto_audit_out)
         break
     window.close()
