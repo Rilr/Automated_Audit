@@ -22,16 +22,20 @@ def diffChecker(audit_df, inventory_lib):
         New data frame with calculated comparision
     '''
 
+    # Port file_path to a DataFrame; based on file_type
     if inventory_lib['file_type'] == "excel":
         input_df = pd.read_excel(inventory_lib['file_path'], header=inventory_lib['header'], usecols=[inventory_lib['column']], engine='openpyxl')
     elif inventory_lib['file_type'] == "csv":
         input_df = pd.read_csv(inventory_lib['file_path'], header=inventory_lib['header'], usecols=[inventory_lib['column']])
     
+    # Clean the DataFrames by removing extraneous data and uppercase conversion
     audit_df = audit_df.dropna(how='all')
     audit_df[inventory_lib['config_name']] = audit_df[inventory_lib['config_name']].str.upper()
     audit_df[inventory_lib['config_name']] = audit_df[inventory_lib['config_name']].replace(r"^ +| +$", r"", regex=True)
     input_df[inventory_lib['device_name']] = input_df[inventory_lib['device_name']].str.upper()
     input_df[inventory_lib['device_name']] = input_df[inventory_lib['device_name']].replace(r"^ +| +$", r"", regex=True)
+    
+    # Merge, compare and label the data
     diffinput_df = pd.merge(audit_df, input_df, left_on=inventory_lib['config_name'], right_on=inventory_lib['device_name'], how='outer', suffixes=['_audit', f'_{inventory_lib["inv_system"]}'], indicator=True)
     diffinput_df = diffinput_df.rename(columns={'_merge': 'Found In'})
     diffinput_df['Found In'] = diffinput_df['Found In'].replace({'left_only': 'Only in AUDIT', 'right_only': f'Only in {inventory_lib["inv_system"].upper()}'})
@@ -39,7 +43,7 @@ def diffChecker(audit_df, inventory_lib):
     return diffinput_df
 
 def dateChecker(inventory_lib):
-    '''Loads pandas dataframe and checks if date is older than 2 weeks
+    '''Loads pandas dataframe and checks if date is older than two_weeks_ago
     
     Args:
         inventory_lib: {
@@ -54,11 +58,11 @@ def dateChecker(inventory_lib):
         }
 
     Return:
-        New data frame with calculated comparision
+        New DataFrame with only items older than two_weeks_ago
     '''
     two_weeks_ago = datetime.now() - timedelta(days=14)
-
-    # TODO Grab file type from path
+    
+    # Port the file_path to a DataFrame and define datemask handling based on file_type
     if inventory_lib['file_type'] == "excel":
         diff_df = pd.read_excel(inventory_lib['file_path'], header=inventory_lib['header'], engine='openpyxl')
         datemask = diff_df[inventory_lib['check_in']] < two_weeks_ago
@@ -67,11 +71,17 @@ def dateChecker(inventory_lib):
         diff_df = pd.read_csv(inventory_lib['file_path'], header=inventory_lib['header'])
         datemask = pd.to_datetime(diff_df[inventory_lib['check_in']]) < two_weeks_ago
 
+    # Apply datemask to DataFrame
     dateDiff_df = diff_df.loc[datemask]
     
     return dateDiff_df
-  
+
+# Supresses SettingWithCopyWarning log messages; pandas gets confused with the library implementation
+pd.options.mode.chained_assignment = None
+
 def main():
+    
+    # Define UI parameters
     sg.theme('DarkAmber')
     layout = [[sg.Text('Audit XLSX')],
             [sg.InputText(key='fpaudit'),
@@ -94,7 +104,11 @@ def main():
     while True:
         event, values = window.read()
 
-        # Declare Variables for the DataFrames
+        # Graceful program shutdown
+        if event in (sg.WIN_CLOSED,'Cancel'):
+            break
+
+        # Declare static variables used in functions
         audit_file_path = values['fpaudit']
         audit_df = pd.read_excel(audit_file_path, sheet_name=0, header=2, usecols=[4], engine='openpyxl')
         auto_audit_out = values['outpath'] + '/audit-discrepancies.xlsx'
@@ -134,9 +148,7 @@ def main():
             "check_in": "Last Seen"
         }
 
-        if event in (sg.WIN_CLOSED,'Cancel'):
-            break
-
+        # Calls on the above functions and libraries to write a processed DataFrame into an .xlsx sheet; dependant on the file's presence
         if event == "Submit":
             with pd.ExcelWriter(auto_audit_out, mode='w', engine='xlsxwriter') as writer:
                 if audit_file_path and autoLib['file_path']:
@@ -151,10 +163,14 @@ def main():
                     dateChecker(intuneLib).to_excel(writer, sheet_name='dateIntune', index=False)
                 if webrootLib['file_path']:
                     dateChecker(webrootLib).to_excel(writer, sheet_name='dateWebroot', index=False)
+        # TODO Add button to open export location via values['outpath'], also button alignment is weird here
         sg.popup('Your report was generated at ' + auto_audit_out)
-        break
+        
+        # Change me to "break" if program should close after clicking "OK" on pop-up
+        continue
     window.close()
 
 if __name__ == "__main__":
     main()
-
+# TODO Grab file type from path
+# TODO Hook data from APIs
