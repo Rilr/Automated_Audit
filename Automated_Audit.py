@@ -110,7 +110,7 @@ def main():
 
         # Declare static variables used in functions
         audit_file_path = values['fpaudit']
-        audit_df = pd.read_excel(audit_file_path, sheet_name=0, header=2, usecols=[4], engine='openpyxl')
+        audit_df = pd.read_excel(audit_file_path, sheet_name=0, header=2, usecols=["Configuration Name"], engine='openpyxl')
         auto_audit_out = values['outpath'] + '/audit-discrepancies.xlsx'
 
         # Define libraries
