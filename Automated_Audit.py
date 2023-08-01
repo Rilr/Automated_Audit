@@ -2,7 +2,7 @@ import PySimpleGUI as sg
 import pandas as pd
 from datetime import datetime, timedelta
 
-def diffChecker(audit_df, inventory_lib):
+def diffChecker(source_lib, inventory_lib):
     '''Cleans and compares data from two frames
     
     Args:
@@ -22,6 +22,9 @@ def diffChecker(audit_df, inventory_lib):
         New data frame with calculated comparision
     '''
 
+    # if source_lib['file_type'] == "excel":
+    #     source_df = 
+
     # Port file_path to a DataFrame; based on file_type
     if inventory_lib['file_type'] == "excel":
         input_df = pd.read_excel(inventory_lib['file_path'], header=inventory_lib['header'], usecols=[inventory_lib['column']], engine='openpyxl')
@@ -30,8 +33,8 @@ def diffChecker(audit_df, inventory_lib):
     
     # Clean the DataFrames by removing extraneous data and uppercase conversion
     audit_df = audit_df.dropna(how='all')
-    audit_df[inventory_lib['config_name']] = audit_df[inventory_lib['config_name']].str.upper()
-    audit_df[inventory_lib['config_name']] = audit_df[inventory_lib['config_name']].replace(r"^ +| +$", r"", regex=True)
+    audit_df[source_lib['config_name']] = audit_df[inventory_lib['config_name']].str.upper()
+    audit_df[source_lib['config_name']] = audit_df[inventory_lib['config_name']].replace(r"^ +| +$", r"", regex=True)
     input_df[inventory_lib['device_name']] = input_df[inventory_lib['device_name']].str.upper()
     input_df[inventory_lib['device_name']] = input_df[inventory_lib['device_name']].replace(r"^ +| +$", r"", regex=True)
     
@@ -86,18 +89,27 @@ def main():
     layout = [[sg.Text('Audit XLSX')],
             [sg.InputText(key='fpaudit'),
             sg.FileBrowse(file_types=[("xlsx Files","*.xlsx")])],
+
             [sg.Text('Automate XLSX')],
             [sg.InputText(key="fpauto"),
             sg.FileBrowse(file_types=[("xlsx Files","*.xlsx")])],
+
+            [sg.Text('ConnectWise Manage CSV')],
+            [sg.InputText(key="fpmanage"),
+            sg.FileBrowse(file_types=[("CSV Files","*.csv")])],
+
             [sg.Text('Intune CSV')],
             [sg.InputText(key="fpintune"),
             sg.FileBrowse(file_types=[("CSV Files","*.csv")])],
+
             [sg.Text('Webroot CSV')],
             [sg.InputText(key="fpwebroot"),
             sg.FileBrowse(file_types=[("CSV Files","*.csv")])],
+
             [sg.Text('File Output Location')],
             [sg.InputText(key="outpath"),
             sg.FolderBrowse()],
+
             [sg.Button("Submit"),sg.Cancel()]],
     window = sg.Window('Auto-Automate by JLS', layout)
 
@@ -114,6 +126,30 @@ def main():
         auto_audit_out = values['outpath'] + '/audit-discrepancies.xlsx'
 
         # Define libraries
+        auditLib = {
+            "inv_system": "audit",
+            "config_name": "Configuration Name", #should be able to delete config_name / device_name from others
+            "device_name": "Name",
+            "file_type": "excel",
+            "header": 2,
+            "column": 0,
+            "file_path": values['fpaudit'],
+            "check_in": "Last Contact"
+
+        }
+
+        manageLib = {
+            "inv_system": "manage",
+            "config_name": "Configuration Name",
+            "device_name": "Name",
+            "file_type": "csv",
+            "header": 0,
+            "column": 0,
+            "file_path": values['fpmanage'],
+            "check_in": "Last Contact"
+
+        }
+
         autoLib = {
             "inv_system": "auto",
             "config_name": "Configuration Name",
@@ -151,18 +187,20 @@ def main():
         # Calls on the above functions and libraries to write a processed DataFrame into an .xlsx sheet; dependant on the file's presence
         if event == "Submit":
             with pd.ExcelWriter(auto_audit_out, mode='w', engine='xlsxwriter') as writer:
-                if audit_file_path and autoLib['file_path']:
-                    diffChecker(audit_df, autoLib,).to_excel(writer, sheet_name='diffAuto', index=False)
-                if audit_file_path and intuneLib['file_path']:
-                    diffChecker(audit_df, intuneLib).to_excel(writer, sheet_name='diffIntune', index=False)
-                if audit_file_path and webrootLib['file_path']:
-                    diffChecker(audit_df, webrootLib).to_excel(writer, sheet_name='diffWebroot', index=False)
+                if auditLib['file_path'] and autoLib['file_path']:
+                    diffChecker(audit_df, autoLib,).to_excel(writer, sheet_name='Audit vs Auto', index=False)
+                if auditLib['file_path'] and intuneLib['file_path']:
+                    diffChecker(audit_df, intuneLib).to_excel(writer, sheet_name='Audit vs Intune', index=False)
+                if auditLib['file_path'] and webrootLib['file_path']:
+                    diffChecker(audit_df, webrootLib).to_excel(writer, sheet_name='Audit vs Webroot', index=False)
+                if manageLib['file_path'] and autoLib['file_path']:
+                    diffChecker(manageLib, autoLib).to_excel(writer, sheet_name='Manage vs Auto', index=False)
                 if autoLib['file_path']:
-                    dateChecker(autoLib).to_excel(writer, sheet_name='dateAuto', index=False)
+                    dateChecker(autoLib).to_excel(writer, sheet_name='Old Auto', index=False)
                 if intuneLib['file_path']:
-                    dateChecker(intuneLib).to_excel(writer, sheet_name='dateIntune', index=False)
+                    dateChecker(intuneLib).to_excel(writer, sheet_name='Old Intune', index=False)
                 if webrootLib['file_path']:
-                    dateChecker(webrootLib).to_excel(writer, sheet_name='dateWebroot', index=False)
+                    dateChecker(webrootLib).to_excel(writer, sheet_name='Old Webroot', index=False)
         # TODO Add button to open export location via values['outpath'], also button alignment is weird here
         sg.popup('Your report was generated at ' + auto_audit_out)
         
