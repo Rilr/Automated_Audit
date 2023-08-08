@@ -79,11 +79,8 @@ def dateChecker(inventory_lib):
     
     return dateDiff_df
 
-# Supresses SettingWithCopyWarning log messages; pandas gets confused with the library implementation
-pd.options.mode.chained_assignment = None
-
 def main():
-    
+
     # Define UI parameters
     sg.theme('DarkAmber')
     layout = [[sg.Text('Audit XLSX')],
@@ -120,10 +117,7 @@ def main():
         if event in (sg.WIN_CLOSED,'Cancel'):
             break
 
-        # Declare static variables used in functions
-        auto_audit_out = values['outpath'] + '/audit-discrepancies.xlsx'
-
-        # Define libraries
+        # Define dictionaries
         auditLib = {
             "inv_system": "audit",
             "config_name": "Configuration Name",
@@ -173,7 +167,14 @@ def main():
             "check_in": "Last Seen"
         }
 
-        # Calls on the above functions and libraries to write a processed DataFrame into an .xlsx sheet; dependant on the file's presence
+        # Outpath defined in the UI
+        auto_audit_out = values['outpath'] + '/audit-discrepancies.xlsx'
+        
+        # Supresses SettingWithCopyWarning log messages; pandas gets confused with the library implementation
+        pd.options.mode.chained_assignment = None
+
+        
+        # Calls on the above functions and dictionaries to write a processed DataFrame into an .xlsx sheet; dependent on the file's presence.
         if event == "Submit":
             with pd.ExcelWriter(auto_audit_out, mode='w', engine='xlsxwriter') as writer:
                 if auditLib['file_path'] and autoLib['file_path']:
