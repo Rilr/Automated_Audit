@@ -2,20 +2,23 @@ package main
 
 import (
 	"fmt"
+
 	"github.com/xuri/excelize/v2"
+
+	"path/filepath"
 )
 
 // func comparecheck()
-
 
 // func datecheck()
 
 // func readExcel(xlfile string) {
 //	dataMap := make(map[string]string)
 
-
 func main() {
-	dataframe, err := excelize.OpenFile("B:\auto.xlsx")
+	excelfilepath := "B:/auto.xlsx"
+	normalpath := filepath.Clean(excelfilepath)
+	dataframe, err := excelize.OpenFile(normalpath)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -26,7 +29,7 @@ func main() {
 			fmt.Println(err)
 		}
 	}()
-	cell err := dataframe.GetCellValue("Sheet", "A1")
+	cell, err := dataframe.GetCellValue("Sheet", "A1")
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -40,7 +43,7 @@ func main() {
 	}
 	for _, row := range rows {
 		for _, colCell := range row {
-			fmt.Print(collCell, "\t")
+			fmt.Print(colCell, "\t")
 		}
 		fmt.Println()
 	}
