@@ -4,8 +4,7 @@ import (
 	"fmt"
 
 	"github.com/xuri/excelize/v2"
-
-	"path/filepath"
+	//"path/filepath"
 )
 
 // func comparecheck()
@@ -16,11 +15,11 @@ import (
 //	dataMap := make(map[string]string)
 
 func main() {
-	excelfilepath := "B:/auto.xlsx"
-	normalpath := filepath.Clean(excelfilepath)
-	dataframe, err := excelize.OpenFile(normalpath)
+	excelfilepath := "B:\\auto.xlsx"
+	//normalpath := filepath.Clean(excelfilepath)
+	dataframe, err := excelize.OpenFile(excelfilepath)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("Couldn't open the file", err)
 		return
 	}
 	defer func() {
@@ -29,22 +28,33 @@ func main() {
 			fmt.Println(err)
 		}
 	}()
-	cell, err := dataframe.GetCellValue("Sheet", "A1")
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	fmt.Println(cell)
 
 	rows, err := dataframe.GetRows("Sheet")
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("Couldn't retrieve rows", err)
 		return
 	}
+
+	var colnameindex = map[string]int{}
+	headerrow := rows[0]
+	for colindex, colvalue := range headerrow {
+		colnameindex[colvalue] = colindex
+	}
+
+	config_name := "Name"
+	config_date := "Last Contact"
+
 	for _, row := range rows {
-		for _, colCell := range row {
-			fmt.Print(colCell, "\t")
+		nameindex, found := colnameindex[config_name]
+		dateindex, found := colnameindex[config_date]
+
+		if !found {
+			fmt.Printf(config_name, " header not found")
+			fmt.Println(config_date, " header not found")
 		}
-		fmt.Println()
+
+		if len(row) > nameindex && len(row) > dateindex {
+			fmt.Printf("%s\t%s\n", row[nameindex], row[dateindex])
+		}
 	}
 }
