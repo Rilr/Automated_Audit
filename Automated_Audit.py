@@ -1,5 +1,6 @@
 import PySimpleGUI as sg
 import pandas as pd
+import os
 from datetime import datetime, timedelta
 
 def diffChecker(source_lib, inventory_lib):
@@ -21,13 +22,13 @@ def diffChecker(source_lib, inventory_lib):
         New data frame with calculated comparision
     '''
     # Port source_lib['file_path'] to a DataFrame; based on file_type
-    if source_lib['file_type'] == "excel":
+    if source_lib['file_type'] == "xlsx":
         source_df = pd.read_excel(source_lib['file_path'], sheet_name=source_lib['sheet_name'], header=source_lib['header'], usecols=[source_lib['column']], engine='openpyxl')
     elif source_lib['file_type'] == "csv":
         source_df = pd.read_csv(source_lib['file_path'], header=source_lib['header'], usecols=[source_lib['column']])
         
     # Port inventory_lib['file_path'] to a DataFrame; based on file_type
-    if inventory_lib['file_type'] == "excel":
+    if inventory_lib['file_type'] == "xlsx":
         input_df = pd.read_excel(inventory_lib['file_path'], header=inventory_lib['header'], usecols=[inventory_lib['column']], engine='openpyxl')
     elif inventory_lib['file_type'] == "csv":
         input_df = pd.read_csv(inventory_lib['file_path'], header=inventory_lib['header'], usecols=[inventory_lib['column']])
@@ -66,7 +67,7 @@ def dateChecker(inventory_lib):
     two_weeks_ago = datetime.now() - timedelta(days=14)
     
     # Port the file_path to a DataFrame and define datemask handling based on file_type
-    if inventory_lib['file_type'] == "excel":
+    if inventory_lib['file_type'] == "xlsx":
         diff_df = pd.read_excel(inventory_lib['file_path'], header=inventory_lib['header'], engine='openpyxl')
         datemask = diff_df[inventory_lib['check_in']] < two_weeks_ago
 
@@ -80,20 +81,20 @@ def dateChecker(inventory_lib):
     return dateDiff_df
 
 def main():
-
+    
     # Define UI parameters
     sg.theme('DarkAmber')
     layout = [[sg.Text('Audit XLSX')],
             [sg.InputText(key='fpaudit'),
-            sg.FileBrowse(file_types=[("xlsx Files","*.xlsx")])],
+            sg.FileBrowse(file_types=[("XLSX Files","*.xlsx")])],
             
             [sg.Text('Manage CSV')],
             [sg.InputText(key="fpmanage"),
             sg.FileBrowse(file_types=[("CSV Files","*.csv")])],
             
-            [sg.Text('Automate XLSX')],
+            [sg.Text('Automate XLSX or CSV')],
             [sg.InputText(key="fpauto"),
-            sg.FileBrowse(file_types=[("xlsx Files","*.xlsx")])],
+            sg.FileBrowse(file_types=[("XLSX Files", "*.xlsx"), ("CSV Files", "*.csv")])],
             
             [sg.Text('Intune CSV')],
             [sg.InputText(key="fpintune"),
@@ -116,13 +117,19 @@ def main():
         # Graceful program shutdown
         if event in (sg.WIN_CLOSED,'Cancel'):
             break
-
+        
+        autoExt = values["fpauto"].split('.')[-1]
+        if autoExt == "xlsx":
+            autoConfName = "Name"
+        elif autoExt == "csv":
+            autoConfName = "Computer Name"
+        
         # Define dictionaries
         auditLib = {
             "inv_system": "audit",
             "config_name": "Configuration Name",
             "sheet_name": 0,
-            "file_type": "excel",
+            "file_type": "xlsx",
             "header": 2,
             "column": "Configuration Name",
             "file_path": values['fpaudit'],
@@ -139,10 +146,10 @@ def main():
 
         autoLib = {
             "inv_system": "auto",
-            "config_name": "Name",
-            "file_type": "excel",
+            "config_name": autoConfName,
+            "file_type": autoExt,
             "header": 0,
-            "column": 0,
+            "column": autoConfName,
             "file_path": values['fpauto'],
             "check_in": "Last Contact"
         }
@@ -166,13 +173,12 @@ def main():
             "file_path": values['fpwebroot'],
             "check_in": "Last Seen"
         }
-
+        
         # Outpath defined in the UI
         auto_audit_out = values['outpath'] + '/audit-discrepancies.xlsx'
         
         # Supresses SettingWithCopyWarning log messages; pandas gets confused with the library implementation
         pd.options.mode.chained_assignment = None
-
         
         # Calls on the above functions and dictionaries to write a processed DataFrame into an .xlsx sheet; dependent on the file's presence.
         if event == "Submit":
