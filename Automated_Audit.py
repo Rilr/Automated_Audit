@@ -3,12 +3,12 @@ import pandas as pd
 import os
 from datetime import datetime, timedelta
 
-def diffChecker(source_lib, inventory_lib):
+def diffChecker(source_lib, input_lib):
     '''Cleans and compares data from two frames
     
     Args:
         audit_df: Pandas data frame of audit file to compare
-        inventory_lib: {
+        input_lib: {
             "inv_system": str,
             "config_name": str,
             "file_type": str,
@@ -27,31 +27,32 @@ def diffChecker(source_lib, inventory_lib):
     elif source_lib['file_type'] == "csv":
         source_df = pd.read_csv(source_lib['file_path'], header=source_lib['header'], usecols=[source_lib['column']])
         
-    # Port inventory_lib['file_path'] to a DataFrame; based on file_type
-    if inventory_lib['file_type'] == "xlsx":
-        input_df = pd.read_excel(inventory_lib['file_path'], header=inventory_lib['header'], usecols=[inventory_lib['column']], engine='openpyxl')
-    elif inventory_lib['file_type'] == "csv":
-        input_df = pd.read_csv(inventory_lib['file_path'], header=inventory_lib['header'], usecols=[inventory_lib['column']])
+    # Port input_lib['file_path'] to a DataFrame; based on file_type
+    if input_lib['file_type'] == "xlsx":
+        input_df = pd.read_excel(input_lib['file_path'], header=input_lib['header'], usecols=[input_lib['column']], engine='openpyxl')
+    elif input_lib['file_type'] == "csv":
+        input_df = pd.read_csv(input_lib['file_path'], header=input_lib['header'], usecols=[input_lib['column']])
     
     # Clean the DataFrames by removing extraneous data and uppercase conversion
     source_df = source_df.dropna(how='all')
     source_df[source_lib['config_name']] = source_df[source_lib['config_name']].str.upper()
     source_df[source_lib['config_name']] = source_df[source_lib['config_name']].replace(r"^ +| +$", r"", regex=True)
-    input_df[inventory_lib['config_name']] = input_df[inventory_lib['config_name']].str.upper()
-    input_df[inventory_lib['config_name']] = input_df[inventory_lib['config_name']].replace(r"^ +| +$", r"", regex=True)
+    input_df[input_lib['config_name']] = input_df[input_lib['config_name']].str.upper()
+    input_df[input_lib['config_name']] = input_df[input_lib['config_name']].replace(r"^ +| +$", r"", regex=True)
     
     # Merge, compare and label the data
-    diffinput_df = pd.merge(source_df, input_df, left_on=source_lib['config_name'], right_on=inventory_lib['config_name'], how='outer', suffixes=[f'_{source_lib["inv_system"]}', f'_{inventory_lib["inv_system"]}'], indicator=True)
+    
+    diffinput_df = pd.merge(source_df, input_df, left_on=source_lib['config_name'], right_on=input_lib['config_name'], how='outer', suffixes=[f'_{source_lib["inv_system"]}', f'_{input_lib["inv_system"]}'], indicator=True)
     diffinput_df = diffinput_df.rename(columns={'_merge': 'Found In'})
-    diffinput_df['Found In'] = diffinput_df['Found In'].replace({'left_only': f'Only in {source_lib["inv_system"].upper()}', 'right_only': f'Only in {inventory_lib["inv_system"].upper()}'})
+    diffinput_df['Found In'] = diffinput_df['Found In'].replace({'left_only': f'Only in {source_lib["inv_system"].upper()}', 'right_only': f'Only in {input_lib["inv_system"].upper()}'})
     
     return diffinput_df
 
-def dateChecker(inventory_lib):
+def dateChecker(input_lib):
     '''Loads pandas dataframe and checks if date is older than two_weeks_ago
     
     Args:
-        inventory_lib: {
+        input_lib: {
             "inv_system": str,
             "config_name": str,
             "file_type": str,
@@ -67,13 +68,13 @@ def dateChecker(inventory_lib):
     two_weeks_ago = datetime.now() - timedelta(days=14)
     
     # Port the file_path to a DataFrame and define datemask handling based on file_type
-    if inventory_lib['file_type'] == "xlsx":
-        diff_df = pd.read_excel(inventory_lib['file_path'], header=inventory_lib['header'], engine='openpyxl')
-        datemask = diff_df[inventory_lib['check_in']] < two_weeks_ago
+    if input_lib['file_type'] == "xlsx":
+        diff_df = pd.read_excel(input_lib['file_path'], header=input_lib['header'], engine='openpyxl')
+        datemask = diff_df[input_lib['check_in']] < two_weeks_ago
 
-    elif inventory_lib['file_type'] == "csv":
-        diff_df = pd.read_csv(inventory_lib['file_path'], header=inventory_lib['header'])
-        datemask = pd.to_datetime(diff_df[inventory_lib['check_in']]) < two_weeks_ago
+    elif input_lib['file_type'] == "csv":
+        diff_df = pd.read_csv(input_lib['file_path'], header=input_lib['header'])
+        datemask = pd.to_datetime(diff_df[input_lib['check_in']]) < two_weeks_ago
 
     # Apply datemask to DataFrame
     dateDiff_df = diff_df.loc[datemask]
