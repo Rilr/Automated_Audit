@@ -3,6 +3,23 @@ import pandas as pd
 import os
 from datetime import datetime, timedelta
 
+#TODO Look into class implementation to handle the data more cleanly. 
+
+def execSummary():
+    '''Aggregates all submitted data into one sheet for simple reading'''
+    # Combine all data
+    # Index off of the device name
+    # Iterate through each name and get data from each dataframe
+    # Return one large dataframe to be exported to its own excel sheet
+    pass
+
+def probSummary():
+    '''Highlights problem workstations for review'''
+    # Get data from diffChecker() for each library (exclude devices labelled "both")
+    # Get data from dateChecker() for each relevant library
+    # Concat along device name and include columns for each issue. (inner merge maybe?)
+    pass
+
 def diffChecker(source_lib, input_lib):
     '''Cleans and compares data from two frames
     
