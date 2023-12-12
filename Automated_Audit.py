@@ -1,9 +1,14 @@
 import PySimpleGUI as sg
 import pandas as pd
-import os
 from datetime import datetime, timedelta
 
 #TODO Look into class implementation to handle the data more cleanly. 
+
+def read_file_to_df(lib):
+    if lib['file_type'] == "xlsx":
+        return pd.read_excel(lib['file_path'], header=lib['header'], usecols=[lib['column']], engine='openpyxl')
+    elif lib['file_type'] == "csv":
+        return pd.read_csv(lib['file_path'], header=lib['header'], usecols=[lib['column']])
 
 def execSummary():
     '''Aggregates all submitted data into one sheet for simple reading'''
@@ -39,17 +44,9 @@ def diffChecker(source_lib, input_lib):
         New data frame with calculated comparision
     '''
     # Port source_lib['file_path'] to a DataFrame; based on file_type
-    if source_lib['file_type'] == "xlsx":
-        source_df = pd.read_excel(source_lib['file_path'], sheet_name=source_lib['sheet_name'], header=source_lib['header'], usecols=[source_lib['column']], engine='openpyxl')
-    elif source_lib['file_type'] == "csv":
-        source_df = pd.read_csv(source_lib['file_path'], header=source_lib['header'], usecols=[source_lib['column']])
-        
-    # Port input_lib['file_path'] to a DataFrame; based on file_type
-    if input_lib['file_type'] == "xlsx":
-        input_df = pd.read_excel(input_lib['file_path'], header=input_lib['header'], usecols=[input_lib['column']], engine='openpyxl')
-    elif input_lib['file_type'] == "csv":
-        input_df = pd.read_csv(input_lib['file_path'], header=input_lib['header'], usecols=[input_lib['column']])
-    
+    source_df = read_file_to_df(source_lib)
+    input_df = read_file_to_df(input_lib)
+
     # Clean the DataFrames by removing extraneous data and uppercase conversion
     source_df = source_df.dropna(how='all')
     source_df[source_lib['config_name']] = source_df[source_lib['config_name']].str.upper()
@@ -141,7 +138,7 @@ def main():
             autoConfName = "Name"
         elif autoExt == "csv":
             autoConfName = "Computer Name"
-        
+
         # Define dictionaries
         auditLib = {
             "inv_system": "audit",
@@ -184,10 +181,10 @@ def main():
         
         webrootLib = {
             "inv_system": "webroot",
-            "config_name": "Hostname",
+            "config_name": "Name",
             "file_type": "csv",
             "header": 0,
-            "column": 0,
+            "column": "Name",
             "file_path": values['fpwebroot'],
             "check_in": "Last Seen"
         }
