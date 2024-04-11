@@ -77,6 +77,7 @@ def main():
         
         # Calls on the above functions and dictionaries to write a processed DataFrame into an .xlsx sheet; dependent on the file's presence.
         if event == "Submit":
+            #TODO grab all data and port it to it's own sheet
             devices_df = pd.DataFrame()
             if auditLib['file_path']:
                 audit_df = file_to_df(auditLib)
